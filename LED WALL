@@ -112,5 +112,5 @@ void loop()
 
    
 
-   FastLED.show();  // write the changes we just made to the display
+   FastLED.show();  // push data to leds
 }
