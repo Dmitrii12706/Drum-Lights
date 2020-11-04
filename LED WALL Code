@@ -1,0 +1,118 @@
+
+#include "FastLED.h"
+#define NUM_LEDS 200
+#define Data_Pin 6
+#define chipset WS2811
+#define BRIGHTNESS  255
+
+CRGB leds[NUM_LEDS];
+
+int PiezoVal;
+int PiezoPin;
+
+const int maxScale = 19;
+//const int redZone = 28;
+
+
+const int sampleWindow = 60; // To adjust the speed for LED lighting up/lighting down. THe higher the number, the slower the speed 
+unsigned int sample;
+
+void setup() 
+{
+   Serial.begin(9600);
+
+   FastLED.addLeds<chipset, Data_Pin,RGB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip); 
+   FastLED.setTemperature(0xFFFAF4);//0xFF9329 - candle; lots of red
+                                    //0xFFC58F - Tungsten40W; lots of red too
+                                    //0xFFD6AA - Tungsten40W
+                                    //0xFFF1E0 - Halogen
+                                    //0xFFFAF4 - CarbonArc
+   FastLED.setBrightness(BRIGHTNESS);
+
+   FastLED.clear();
+}
+
+
+void loop() 
+{
+   unsigned long startMillis= millis();  // Start of sample window
+   unsigned int peakToPeak = 0;   // peak-to-peak level
+
+   unsigned int signalMax = 0;
+   unsigned int signalMin = 1024;
+
+   int a[20] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
+   int b[20] = {39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20};
+   int c[20] = {40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59};
+   int d[20] = {79,78,77,76,75,74,73,72,71,70,69,68,67,66,65,64,63,62,61,60};
+   int e[20] = {80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99};
+   int f[20] = {119,118,117,116,115,114,113,112,111,110,109,108,107,106,105,104,103,102,101,100};
+   int g[20] = {120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139};
+   int h[20] = {159,158,157,156,155,154,153,152,151,150,149,148,147,146,145,144,143,142,141,140};
+   int x[20] = {160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179};
+   int j[20] = {199,198,197,196,195,194,193,192,191,190,189,188,187,186,185,184,183,182,181,180};
+
+   while (millis() - startMillis < sampleWindow)
+   {
+      sample = analogRead(5); 
+      if (sample < 1024)  // toss out spurious readings
+      {
+         if (sample > signalMax)
+         {
+            signalMax = sample;  // save just the max levels
+         }
+         else if (sample < signalMin)
+         {
+            signalMin = sample;  // save just the min levels
+         }
+      }
+   }
+   peakToPeak = signalMax - signalMin;
+
+   int displayPeak = map(peakToPeak, 100, 1022, 0, maxScale); // Try to change 1022 to 1024
+
+   int H = map(peakToPeak, 0, 1023, 0, 213);
+   
+   int S = map(peakToPeak, 0, 1023, 100, 250);
+
+   int V = map(peakToPeak, 0, 1023, 180, 250);
+
+
+   // draw the new sample
+   for (int i = 0; i <= maxScale; i++)
+   {     
+
+    if (i > displayPeak)  // blank these pixels
+      {
+         leds[a[i]].setRGB(0, 0, 0);
+         leds[b[i]].setRGB(0, 0, 0);
+         leds[c[i]].setRGB(0, 0, 0);
+         leds[d[i]].setRGB(0, 0, 0);
+         leds[e[i]].setRGB(0, 0, 0);
+         leds[f[i]].setRGB(0, 0, 0);
+         leds[g[i]].setRGB(0, 0, 0);
+         leds[h[i]].setRGB(0, 0, 0);
+         leds[x[i]].setRGB(0, 0, 0);
+         leds[j[i]].setRGB(0, 0, 0);
+      }     
+      
+      else
+      {
+         leds[a[i]].setHSV(H, 255, 255);
+         leds[b[i]].setHSV(H, 255, 255);
+         leds[c[i]].setHSV(H, 255, 255);
+         leds[d[i]].setHSV(H, 255, 255);
+         leds[e[i]].setHSV(H, 255, 255);
+         leds[f[i]].setHSV(H, 255, 255);
+         leds[g[i]].setHSV(H, 255, 255);
+         leds[h[i]].setHSV(H, 255, 255);
+         leds[x[i]].setHSV(H, 255, 255);
+         leds[j[i]].setHSV(H, 255, 255);
+      }
+      
+   }
+
+   
+
+   FastLED.show(); 
+}
