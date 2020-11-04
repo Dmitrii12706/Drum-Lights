@@ -1,0 +1,96 @@
+
+#include "FastLED.h"
+#define NUM_LEDS 120
+#define Data_Pin 6
+#define chipset NEOPIXEL
+#define BRIGHTNESS  255
+
+CRGB leds[NUM_LEDS];
+
+int PiezoVal;
+int PiezoPin;
+
+const int maxScale = 29;
+//const int redZone = 28;
+
+
+const int sampleWindow = 55; // Sample window width in mS (50 mS = 20Hz)
+unsigned int sample;
+
+void setup() 
+{
+   Serial.begin(9600);
+
+   FastLED.addLeds<chipset, Data_Pin>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip); 
+   FastLED.setTemperature(0xFFFFFB);//0xFF9329 - candle; lots of red
+                                    //0xFFC58F - Tungsten40W; lots of red too
+                                    //0xFFD6AA - Tungsten40W
+                                    //0xFFF1E0 - Halogen
+                                    //0xFFFAF4 - CarbonArc
+   FastLED.setBrightness(BRIGHTNESS);
+}
+
+
+void loop() 
+{
+   unsigned long startMillis= millis();  // Start of sample window
+   unsigned int peakToPeak = 0;   // peak-to-peak level
+
+   unsigned int signalMax = 0;
+   unsigned int signalMin = 1024;
+
+   int L1[30] = {29,  28,  27,  26,  25,  24,  23,  22,  21,  20,  19,  18,  17,  16,  15,  14,  13,  12,  11,  10,  9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+   int LL1[30] = {30, 31,  32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,  52,  53,  54,  55,  56,  57,  58,  59};
+
+   int LL2[30] = {89, 88,  87,  86,  85,  84,  83,  82,  81,  80,  79,  78,  77,  76,  75,  74,  73,  72,  71,  70,  69,  68,  67,  66,  65,  64,  63,  62,  61,  60};
+   int L2[30] = {90, 91,  92,  93,  94,  95,  96,  97,  98,  99,  100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119};
+
+   while (millis() - startMillis < sampleWindow)
+   {
+      sample = analogRead(5); 
+      if (sample < 1024)  // toss out spurious readings
+      {
+         if (sample > signalMax)
+         {
+            signalMax = sample;  // save just the max levels
+         }
+         else if (sample < signalMin)
+         {
+            signalMin = sample;  // save just the min levels
+         }
+      }
+   }
+   peakToPeak = signalMax - signalMin;
+
+   int displayPeak = map(peakToPeak, 100, 1022, 0, maxScale);
+
+   int H = map(peakToPeak, 0, 1023, 0, 213);
+   
+   int S = map(peakToPeak, 0, 1023, 100, 250);
+
+   int V = map(peakToPeak, 0, 1023, 180, 250);
+
+   
+
+   // draw the new sample
+   for (int i = 0; i <= maxScale; i++)
+   {
+      if (i > displayPeak)  // blank these pixels // if >= not > the last leds of arrays wont't lit up
+      {
+         leds[L1[i]].setHSV(0, 0, 0);
+         leds[LL1[i]].setHSV(0, 0, 0);
+         leds[L2[i]].setHSV(0, 0, 0);
+         leds[LL2[i]].setHSV(0, 0, 0);
+      }     
+      
+      else
+      {
+         leds[L1[i]].setHSV(H, 250, V);
+         leds[LL1[i]].setHSV(0, S, V);
+         leds[L2[i]].setHSV(0, S, V);
+         leds[LL2[i]].setHSV(H, 250, V);
+      }
+   }
+
+   FastLED.show();  // write the changes we just made to the display
+}
